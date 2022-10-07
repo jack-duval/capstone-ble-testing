@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:ble_testing/widgets.dart';
 
+Map<int,String> dataBuffer = new Map();
+
 void main() {
   runApp(FlutterBlueApp());
 }
@@ -183,15 +185,17 @@ class DeviceScreen extends StatelessWidget {
             characteristicTiles: mcuService.characteristics
                 .map((c) => CharacteristicModTile(
                       char: c,
-                      onReadPressed: () =>
-                          utf8.decodeStream(c.read().asStream()).toString(),
+                      onReadPressed: () => {
+                        utf8.decodeStream(c.read().asStream()).toString(),
+                      }
+                          
                       onWritePressed: () async {
                         await c.write(_ackBytes(), withoutResponse: false);
                         utf8.decodeStream(c.read().asStream()).toString();
                       },
                       onNotificationPressed: () async {
                         await c.setNotifyValue(!c.isNotifying);
-                        await utf8.decodeStream(c.read().asStream()).toString();
+                        utf8.decodeStream(c.read().asStream()).toString();
                       },
                       descTiles: c.descriptors
                           .map((d) => DescriptorTile(
@@ -232,11 +236,11 @@ class DeviceScreen extends StatelessWidget {
                         utf8.decodeStream(c.read().asStream()).toString(),
                     onWritePressed: () async {
                       await c.write(_ackBytes(), withoutResponse: false);
-                      await utf8.decodeStream(c.read().asStream()).toString();
+                      utf8.decodeStream(c.read().asStream()).toString();
                     },
                     onNotificationPressed: () async {
                       await c.setNotifyValue(!c.isNotifying);
-                      await utf8.decodeStream(c.read().asStream()).toString();
+                      utf8.decodeStream(c.read().asStream()).toString();
                     },
                     descTiles: c.descriptors
                         .map(
