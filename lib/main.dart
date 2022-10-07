@@ -3,6 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -167,10 +168,58 @@ class DeviceScreen extends StatelessWidget {
   }
 
   List<int> _ackBytes() {
-    return [1];
+    return utf8.encode("1");
+  }
+
+  Widget _buildImpactTile(List<BluetoothService> services) {
+    BluetoothService mcuService;
+    for (int i = 0; i < services.length; i++) {
+      if (services[i].uuid.toString() ==
+          "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
+        mcuService = services[i];
+
+        return ServiceTile(
+            service: mcuService,
+            characteristicTiles: mcuService.characteristics
+                .map((c) => CharacteristicModTile(
+                      char: c,
+                      onReadPressed: () =>
+                          utf8.decodeStream(c.read().asStream()).toString(),
+                      onWritePressed: () async {
+                        await c.write(_ackBytes(), withoutResponse: false);
+                        utf8.decodeStream(c.read().asStream()).toString();
+                      },
+                      onNotificationPressed: () async {
+                        await c.setNotifyValue(!c.isNotifying);
+                        await utf8.decodeStream(c.read().asStream()).toString();
+                      },
+                      descTiles: c.descriptors
+                          .map((d) => DescriptorTile(
+                                descriptor: d,
+                                onReadPressed: () => utf8
+                                    .decodeStream(d.read().asStream())
+                                    .toString(),
+                                onWritePressed: () => d.write(_ackBytes()),
+                              ))
+                          .toList(),
+                    ))
+                .toList());
+      }
+    }
+
+    return Text("MCU Service UUID Not found.");
   }
 
   List<Widget> _buildServiceTiles(List<BluetoothService> services) {
+    BluetoothService mcuService;
+    for (int i = 0; i < services.length; i++) {
+      if (services[i].uuid.toString() ==
+          "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
+        mcuService = services[i];
+        break;
+      }
+    }
+
     return services
         .map(
           (s) => ServiceTile(
@@ -179,20 +228,23 @@ class DeviceScreen extends StatelessWidget {
                 .map(
                   (c) => CharacteristicModTile(
                     char: c,
-                    onReadPressed: () => c.read(),
+                    onReadPressed: () =>
+                        utf8.decodeStream(c.read().asStream()).toString(),
                     onWritePressed: () async {
-                      await c.write(_getRandomBytes(), withoutResponse: true);
-                      await c.read();
+                      await c.write(_ackBytes(), withoutResponse: false);
+                      await utf8.decodeStream(c.read().asStream()).toString();
                     },
                     onNotificationPressed: () async {
                       await c.setNotifyValue(!c.isNotifying);
-                      await c.read();
+                      await utf8.decodeStream(c.read().asStream()).toString();
                     },
                     descTiles: c.descriptors
                         .map(
                           (d) => DescriptorTile(
                             descriptor: d,
-                            onReadPressed: () => d.read(),
+                            onReadPressed: () => utf8
+                                .decodeStream(d.read().asStream())
+                                .toString(),
                             onWritePressed: () => d.write(_ackBytes()),
                           ),
                         )
@@ -219,7 +271,24 @@ class DeviceScreen extends StatelessWidget {
               String text;
               switch (snapshot.data) {
                 case BluetoothDeviceState.connected:
-                  onPressed = () => device.disconnect();
+                  onPressed = () async {
+                    List<BluetoothService> services =
+                        await device.discoverServices();
+                    services.forEach((s) {
+                      if (s.uuid.toString() ==
+                          "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
+                        var characteristics = s.characteristics;
+                        characteristics.forEach((c) async {
+                          if (c.uuid.toString() ==
+                              "ad79d3e8-8f69-4086-b0f4-4aa46cf28000") {
+                            await c.write(utf8.encode("2"));
+                          }
+                        });
+                      }
+                    });
+
+                    device.disconnect();
+                  };
                   text = 'DISCONNECT';
                   break;
                 case BluetoothDeviceState.disconnected:
@@ -299,7 +368,8 @@ class DeviceScreen extends StatelessWidget {
               initialData: [],
               builder: (c, snapshot) {
                 return Column(
-                  children: _buildServiceTiles(snapshot.data!),
+                  children: [_buildImpactTile(snapshot.data!)],
+                  //children: _buildServiceTiles(snapshot.data!),
                 );
               },
             ),

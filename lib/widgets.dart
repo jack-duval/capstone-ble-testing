@@ -2,6 +2,8 @@
 // All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 
@@ -187,7 +189,7 @@ class CharacteristicModTile extends StatelessWidget {
                     color: Theme.of(context).textTheme.caption?.color))
               ],
             ),
-            subtitle: Text(value.toString()),
+            subtitle: Text(utf8.decode(value!).toString()),
             contentPadding: EdgeInsets.all(0.0),
           ),
           trailing: Row(
