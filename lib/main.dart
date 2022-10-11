@@ -4,13 +4,14 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:ble_testing/widgets.dart';
 
-Map<int,String> dataBuffer = new Map();
+Map<int, String> dataBuffer = new Map();
 
 void main() {
   runApp(FlutterBlueApp());
@@ -173,6 +174,23 @@ class DeviceScreen extends StatelessWidget {
     return utf8.encode("1");
   }
 
+  void logData(String data) {
+    var key = -1;
+    var value = "";
+    var splitData = data.split(',');
+    
+    // If data doesn't contain a time reading, return
+    if (!splitData[0].contains("T")) {
+      return;
+    } else {
+      key = int.parse(splitData[0].substring(3));
+      value = splitData.join(",");
+
+      // "T: 0,..." assuming the formtat "T: X,...rest_of_data..."
+      dataBuffer.putIfAbsent(key, () => value);
+    }
+  }
+
   Widget _buildImpactTile(List<BluetoothService> services) {
     BluetoothService mcuService;
     for (int i = 0; i < services.length; i++) {
@@ -186,14 +204,17 @@ class DeviceScreen extends StatelessWidget {
                 .map((c) => CharacteristicModTile(
                       char: c,
                       onReadPressed: () => {
+                        logData(utf8.decodeStream(c.read().asStream()).toString()),
                         utf8.decodeStream(c.read().asStream()).toString(),
-                      },  
+                      },
                       onWritePressed: () async {
                         await c.write(_ackBytes(), withoutResponse: false);
+                        logData(utf8.decodeStream(c.read().asStream()).toString());
                         utf8.decodeStream(c.read().asStream()).toString();
                       },
                       onNotificationPressed: () async {
                         await c.setNotifyValue(!c.isNotifying);
+                        logData(utf8.decodeStream(c.read().asStream()).toString());
                         utf8.decodeStream(c.read().asStream()).toString();
                       },
                       descTiles: c.descriptors
@@ -277,18 +298,32 @@ class DeviceScreen extends StatelessWidget {
                   onPressed = () async {
                     List<BluetoothService> services =
                         await device.discoverServices();
-                    services.forEach((s) {
+                    for (var s in services) {
                       if (s.uuid.toString() ==
                           "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
                         var characteristics = s.characteristics;
-                        characteristics.forEach((c) async {
+                        for (var c in characteristics) {
                           if (c.uuid.toString() ==
                               "ad79d3e8-8f69-4086-b0f4-4aa46cf28000") {
                             await c.write(utf8.encode("2"));
                           }
-                        });
+                        }
                       }
-                    });
+                    }
+
+                    // Old way (worked but forEach is not best practice)
+                    // services.forEach((s) {
+                    //   if (s.uuid.toString() ==
+                    //       "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
+                    //     var characteristics = s.characteristics;
+                    //     characteristics.forEach((c) async {
+                    //       if (c.uuid.toString() ==
+                    //           "ad79d3e8-8f69-4086-b0f4-4aa46cf28000") {
+                    //         await c.write(utf8.encode("2"));
+                    //       }
+                    //     });
+                    //   }
+                    // });
 
                     device.disconnect();
                   };
