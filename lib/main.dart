@@ -187,8 +187,7 @@ class DeviceScreen extends StatelessWidget {
                       char: c,
                       onReadPressed: () => {
                         utf8.decodeStream(c.read().asStream()).toString(),
-                      }
-                          
+                      },  
                       onWritePressed: () async {
                         await c.write(_ackBytes(), withoutResponse: false);
                         utf8.decodeStream(c.read().asStream()).toString();
