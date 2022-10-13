@@ -13,6 +13,9 @@ import 'package:ble_testing/widgets.dart';
 
 Map<int, String> dataBuffer = new Map();
 
+// Team Buffer: List of CSV data, each with Service UUID + Timestamp
+// List<String> teamBuffer = new List<>();
+
 void main() {
   runApp(FlutterBlueApp());
 }
@@ -160,16 +163,6 @@ class DeviceScreen extends StatelessWidget {
 
   final BluetoothDevice device;
 
-  List<int> _getRandomBytes() {
-    final math = Random();
-    return [
-      math.nextInt(255),
-      math.nextInt(255),
-      math.nextInt(255),
-      math.nextInt(255)
-    ];
-  }
-
   List<int> _ackBytes() {
     return utf8.encode("1");
   }
@@ -177,17 +170,18 @@ class DeviceScreen extends StatelessWidget {
   void logData(String data) {
     var key = -1;
     var value = "";
-    var splitData = data.split(',');
-    
+    var splitData = data.split(' ');
+
     // If data doesn't contain a time reading, return
-    if (!splitData[0].contains("T")) {
+    if (!splitData.last.contains("T")) {
       return;
     } else {
-      key = int.parse(splitData[0].substring(3));
+      key = int.parse(splitData.last.substring(3));
       value = splitData.join(",");
 
       // "T: 0,..." assuming the formtat "T: X,...rest_of_data..."
       dataBuffer.putIfAbsent(key, () => value);
+      // print(dataBuffer); -> Find way of logging the buffer (or at least some values) in real-time
     }
   }
 
@@ -204,17 +198,20 @@ class DeviceScreen extends StatelessWidget {
                 .map((c) => CharacteristicModTile(
                       char: c,
                       onReadPressed: () => {
-                        logData(utf8.decodeStream(c.read().asStream()).toString()),
+                        logData(
+                            utf8.decodeStream(c.read().asStream()).toString()),
                         utf8.decodeStream(c.read().asStream()).toString(),
                       },
                       onWritePressed: () async {
                         await c.write(_ackBytes(), withoutResponse: false);
-                        logData(utf8.decodeStream(c.read().asStream()).toString());
+                        logData(
+                            utf8.decodeStream(c.read().asStream()).toString());
                         utf8.decodeStream(c.read().asStream()).toString();
                       },
                       onNotificationPressed: () async {
                         await c.setNotifyValue(!c.isNotifying);
-                        logData(utf8.decodeStream(c.read().asStream()).toString());
+                        logData(
+                            utf8.decodeStream(c.read().asStream()).toString());
                         utf8.decodeStream(c.read().asStream()).toString();
                       },
                       descTiles: c.descriptors
@@ -294,6 +291,8 @@ class DeviceScreen extends StatelessWidget {
               VoidCallback? onPressed;
               String text;
               switch (snapshot.data) {
+
+                // Disconnect with Disconnect ACK of "2"
                 case BluetoothDeviceState.connected:
                   onPressed = () async {
                     List<BluetoothService> services =
@@ -311,6 +310,8 @@ class DeviceScreen extends StatelessWidget {
                       }
                     }
 
+                    device.disconnect();
+
                     // Old way (worked but forEach is not best practice)
                     // services.forEach((s) {
                     //   if (s.uuid.toString() ==
@@ -324,8 +325,6 @@ class DeviceScreen extends StatelessWidget {
                     //     });
                     //   }
                     // });
-
-                    device.disconnect();
                   };
                   text = 'DISCONNECT';
                   break;
