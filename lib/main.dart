@@ -172,16 +172,17 @@ class DeviceScreen extends StatelessWidget {
     var value = "";
     var splitData = data.split(' ');
 
+    // Get T on first read (pre-ack) to get base time (UTC) and then add seconds to that every time
+    // T, X1, Y1, Z1, X2, Y2, Z2, HR
     // If data doesn't contain a time reading, return
     if (!splitData.last.contains("T")) {
       return;
     } else {
-      key = int.parse(splitData.last.substring(3));
-      value = splitData.join(",");
-
+      key = int.parse(splitData[0].substring(3));
+      value = splitData.join(" ");
       // "T: 0,..." assuming the formtat "T: X,...rest_of_data..."
       dataBuffer.putIfAbsent(key, () => value);
-      // print(dataBuffer); -> Find way of logging the buffer (or at least some values) in real-time
+      print(dataBuffer); // -> Find way of logging the buffer (or at least some values) in real-time
     }
   }
 
@@ -191,7 +192,6 @@ class DeviceScreen extends StatelessWidget {
       if (services[i].uuid.toString() ==
           "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
         mcuService = services[i];
-
         return ServiceTile(
             service: mcuService,
             characteristicTiles: mcuService.characteristics
@@ -291,8 +291,7 @@ class DeviceScreen extends StatelessWidget {
               VoidCallback? onPressed;
               String text;
               switch (snapshot.data) {
-
-                // Disconnect with Disconnect ACK of "2"
+                // Disconnect with Disconnect ACK of "0"
                 case BluetoothDeviceState.connected:
                   onPressed = () async {
                     List<BluetoothService> services =
@@ -304,7 +303,7 @@ class DeviceScreen extends StatelessWidget {
                         for (var c in characteristics) {
                           if (c.uuid.toString() ==
                               "ad79d3e8-8f69-4086-b0f4-4aa46cf28000") {
-                            await c.write(utf8.encode("2"));
+                            await c.write(utf8.encode("0"));
                           }
                         }
                       }
