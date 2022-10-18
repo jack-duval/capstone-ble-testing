@@ -121,7 +121,7 @@ class ScanResultTile extends StatelessWidget {
 
 class ServiceTile extends StatelessWidget {
   final BluetoothService service;
-  final List<CharacteristicModTile> characteristicTiles;
+  final List<CharacteristicsTile> characteristicTiles;
 
   const ServiceTile(
       {Key? key, required this.service, required this.characteristicTiles})
@@ -153,9 +153,62 @@ class ServiceTile extends StatelessWidget {
   }
 }
 
+class CharacteristicsTile extends StatelessWidget {
+  final BluetoothCharacteristic dataChar;
+  final BluetoothCharacteristic ackChar;
+
+  final VoidCallback? onAutoPressed;
+
+  const CharacteristicsTile(
+      {Key? key,
+      required this.dataChar,
+      required this.ackChar,
+      required this.onAutoPressed,
+      })
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<int>>(
+        stream: dataChar.value,
+        initialData: dataChar.lastValue,
+        builder: (c, snapshot) {
+          final value = snapshot.data;
+          return ExpansionTile(
+            title: ListTile(
+              title: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text('Data Characteristic'),
+                  Text('0x${dataChar.uuid.toString().toUpperCase()}',
+                      style: Theme.of(context).textTheme.bodyText1?.copyWith(
+                          color: Theme.of(context).textTheme.caption?.color))
+                ],
+              ),
+              subtitle: Text(utf8.decode(value!).toString()),
+              contentPadding: EdgeInsets.all(0.0),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                IconButton(
+                  icon: Icon(Icons.thumb_up,
+                      color:
+                          Theme.of(context).iconTheme.color?.withOpacity(0.5)),
+                  onPressed: onAutoPressed,
+                )
+              ],
+            ),
+          );
+        });
+  }
+}
+
 class CharacteristicModTile extends StatelessWidget {
   final BluetoothCharacteristic char;
   final List<DescriptorTile> descTiles;
+  final VoidCallback? onAutoPressed;
   final VoidCallback? onReadPressed;
   final VoidCallback? onWritePressed;
   final VoidCallback? onNotificationPressed;
@@ -164,6 +217,7 @@ class CharacteristicModTile extends StatelessWidget {
       {Key? key,
       required this.char,
       required this.descTiles,
+      required this.onAutoPressed,
       required this.onReadPressed,
       required this.onWritePressed,
       required this.onNotificationPressed})
@@ -172,126 +226,59 @@ class CharacteristicModTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<int>>(
-      stream: char.value,
-      initialData: char.lastValue,
-      builder: (c, snapshot) {
-        final value = snapshot.data;
-        return ExpansionTile(
-          title: ListTile(
-            title: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
+        stream: char.value,
+        initialData: char.lastValue,
+        builder: (c, snapshot) {
+          final value = snapshot.data;
+          return ExpansionTile(
+            title: ListTile(
+              title: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text('Characteristic'),
+                  Text('0x${char.uuid.toString().toUpperCase()}',
+                      style: Theme.of(context).textTheme.bodyText1?.copyWith(
+                          color: Theme.of(context).textTheme.caption?.color))
+                ],
+              ),
+              subtitle: Text(utf8.decode(value!).toString()),
+              contentPadding: EdgeInsets.all(0.0),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text('Characteristic'),
-                Text(
-                  '0x${char.uuid.toString().toUpperCase()}',
-                  style: Theme.of(context).textTheme.bodyText1?.copyWith(
-                    color: Theme.of(context).textTheme.caption?.color))
+                IconButton(
+                  icon: Icon(
+                    Icons.file_download,
+                    color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
+                  ),
+                  onPressed: onReadPressed,
+                ),
+                IconButton(
+                  icon: Icon(Icons.file_upload,
+                      color:
+                          Theme.of(context).iconTheme.color?.withOpacity(0.5)),
+                  onPressed: onWritePressed,
+                ),
+                IconButton(
+                  icon: Icon(
+                      char.isNotifying ? Icons.sync_disabled : Icons.sync,
+                      color:
+                          Theme.of(context).iconTheme.color?.withOpacity(0.5)),
+                  onPressed: onNotificationPressed,
+                ),
+                IconButton(
+                  icon: Icon(Icons.thumb_up,
+                      color:
+                          Theme.of(context).iconTheme.color?.withOpacity(0.5)),
+                  onPressed: onAutoPressed,
+                )
               ],
             ),
-            subtitle: Text(utf8.decode(value!).toString()),
-            contentPadding: EdgeInsets.all(0.0),
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              IconButton(
-                icon: Icon(
-                  Icons.file_download,
-                  color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
-                ),
-                onPressed: onReadPressed,
-              ),
-              IconButton(
-                icon: Icon(Icons.file_upload,
-                    color: Theme.of(context).iconTheme.color?.withOpacity(0.5)),
-                onPressed: onWritePressed,
-              ),
-              IconButton(
-                icon: Icon(
-                    char.isNotifying
-                        ? Icons.sync_disabled
-                        : Icons.sync,
-                    color: Theme.of(context).iconTheme.color?.withOpacity(0.5)),
-                onPressed: onNotificationPressed,
-              )
-            ],
-          ),
-          children: descTiles,
-        );
-      }
-    );
-  }
-}
-
-class CharacteristicTile extends StatelessWidget {
-  final BluetoothCharacteristic characteristic;
-  final List<DescriptorTile> descriptorTiles;
-  final VoidCallback? onReadPressed;
-  final VoidCallback? onWritePressed;
-  final VoidCallback? onNotificationPressed;
-
-  const CharacteristicTile(
-      {Key? key,
-      required this.characteristic,
-      required this.descriptorTiles,
-      this.onReadPressed,
-      this.onWritePressed,
-      this.onNotificationPressed})
-      : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<List<int>>(
-      stream: characteristic.value,
-      initialData: characteristic.lastValue,
-      builder: (c, snapshot) {
-        final value = snapshot.data;
-        return ExpansionTile(
-          title: ListTile(
-            title: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text('Characteristic'),
-                Text(
-                    '0x${characteristic.uuid.toString().toUpperCase().substring(4, 8)}',
-                    style: Theme.of(context).textTheme.bodyText1?.copyWith(
-                        color: Theme.of(context).textTheme.caption?.color))
-              ],
-            ),
-            subtitle: Text(value.toString()),
-            contentPadding: EdgeInsets.all(0.0),
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              IconButton(
-                icon: Icon(
-                  Icons.file_download,
-                  color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
-                ),
-                onPressed: onReadPressed,
-              ),
-              IconButton(
-                icon: Icon(Icons.file_upload,
-                    color: Theme.of(context).iconTheme.color?.withOpacity(0.5)),
-                onPressed: onWritePressed,
-              ),
-              IconButton(
-                icon: Icon(
-                    characteristic.isNotifying
-                        ? Icons.sync_disabled
-                        : Icons.sync,
-                    color: Theme.of(context).iconTheme.color?.withOpacity(0.5)),
-                onPressed: onNotificationPressed,
-              )
-            ],
-          ),
-          children: descriptorTiles,
-        );
-      },
-    );
+            children: descTiles,
+          );
+        });
   }
 }
 

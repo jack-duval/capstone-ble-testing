@@ -170,6 +170,7 @@ class DeviceScreen extends StatelessWidget {
   void logData(String data) {
     var key = -1;
     var value = "";
+
     var splitData = data.split(' ');
 
     // Get T on first read (pre-ack) to get base time (UTC) and then add seconds to that every time
@@ -182,7 +183,8 @@ class DeviceScreen extends StatelessWidget {
       value = splitData.join(" ");
       // "T: 0,..." assuming the formtat "T: X,...rest_of_data..."
       dataBuffer.putIfAbsent(key, () => value);
-      print(dataBuffer); // -> Find way of logging the buffer (or at least some values) in real-time
+      print(
+          dataBuffer); // -> Find way of logging the buffer (or at least some values) in real-time
     }
   }
 
@@ -192,90 +194,51 @@ class DeviceScreen extends StatelessWidget {
       if (services[i].uuid.toString() ==
           "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
         mcuService = services[i];
+
+        var dataCharacteristicUUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+        var ackCharacteristicUUID = "ad79d3e8-8f69-4086-b0f4-4aa46cf28000";
+        var dataCharacteristic = mcuService.characteristics
+            .singleWhere((c) => c.uuid.toString() == dataCharacteristicUUID);
+        var ackCharacteristic = mcuService.characteristics
+            .singleWhere((c) => c.uuid.toString() == ackCharacteristicUUID);
+
         return ServiceTile(
             service: mcuService,
-            characteristicTiles: mcuService.characteristics
-                .map((c) => CharacteristicModTile(
-                      char: c,
-                      onReadPressed: () => {
-                        logData(
-                            utf8.decodeStream(c.read().asStream()).toString()),
-                        utf8.decodeStream(c.read().asStream()).toString(),
+            characteristicTiles: [
+              mcuService.characteristics.singleWhere(
+                  (c) => c.uuid.toString() == dataCharacteristicUUID)
+            ]
+                .map((c) => CharacteristicsTile(
+                      ackChar: ackCharacteristic,
+                      dataChar: dataCharacteristic,
+                      onAutoPressed: () async {
+                        var read = "";
+                        // Slow for now
+                        const timeDelta = Duration(seconds: 5);
+                        Timer.periodic(timeDelta, (Timer t) {
+                          ackCharacteristic.write(_ackBytes(),
+                              withoutResponse: false);
+                          read = utf8
+                              .decodeStream(
+                                  dataCharacteristic.read().asStream())
+                              .toString();
+                        });
+
+                        if (read != "" && read != "Data Queue Empty") {
+                          // AlertDialog(
+                          //   content: Text(read),
+                          // );
+                          logData(read);
+                          read;
+                          print(read);
+                        }
+                        //read;
                       },
-                      onWritePressed: () async {
-                        await c.write(_ackBytes(), withoutResponse: false);
-                        logData(
-                            utf8.decodeStream(c.read().asStream()).toString());
-                        utf8.decodeStream(c.read().asStream()).toString();
-                      },
-                      onNotificationPressed: () async {
-                        await c.setNotifyValue(!c.isNotifying);
-                        logData(
-                            utf8.decodeStream(c.read().asStream()).toString());
-                        utf8.decodeStream(c.read().asStream()).toString();
-                      },
-                      descTiles: c.descriptors
-                          .map((d) => DescriptorTile(
-                                descriptor: d,
-                                onReadPressed: () => utf8
-                                    .decodeStream(d.read().asStream())
-                                    .toString(),
-                                onWritePressed: () => d.write(_ackBytes()),
-                              ))
-                          .toList(),
                     ))
                 .toList());
       }
     }
-
     return Text("MCU Service UUID Not found.");
-  }
-
-  List<Widget> _buildServiceTiles(List<BluetoothService> services) {
-    BluetoothService mcuService;
-    for (int i = 0; i < services.length; i++) {
-      if (services[i].uuid.toString() ==
-          "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
-        mcuService = services[i];
-        break;
-      }
-    }
-
-    return services
-        .map(
-          (s) => ServiceTile(
-            service: s,
-            characteristicTiles: s.characteristics
-                .map(
-                  (c) => CharacteristicModTile(
-                    char: c,
-                    onReadPressed: () =>
-                        utf8.decodeStream(c.read().asStream()).toString(),
-                    onWritePressed: () async {
-                      await c.write(_ackBytes(), withoutResponse: false);
-                      utf8.decodeStream(c.read().asStream()).toString();
-                    },
-                    onNotificationPressed: () async {
-                      await c.setNotifyValue(!c.isNotifying);
-                      utf8.decodeStream(c.read().asStream()).toString();
-                    },
-                    descTiles: c.descriptors
-                        .map(
-                          (d) => DescriptorTile(
-                            descriptor: d,
-                            onReadPressed: () => utf8
-                                .decodeStream(d.read().asStream())
-                                .toString(),
-                            onWritePressed: () => d.write(_ackBytes()),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                )
-                .toList(),
-          ),
-        )
-        .toList();
   }
 
   @override
@@ -310,20 +273,6 @@ class DeviceScreen extends StatelessWidget {
                     }
 
                     device.disconnect();
-
-                    // Old way (worked but forEach is not best practice)
-                    // services.forEach((s) {
-                    //   if (s.uuid.toString() ==
-                    //       "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
-                    //     var characteristics = s.characteristics;
-                    //     characteristics.forEach((c) async {
-                    //       if (c.uuid.toString() ==
-                    //           "ad79d3e8-8f69-4086-b0f4-4aa46cf28000") {
-                    //         await c.write(utf8.encode("2"));
-                    //       }
-                    //     });
-                    //   }
-                    // });
                   };
                   text = 'DISCONNECT';
                   break;
@@ -372,13 +321,13 @@ class DeviceScreen extends StatelessWidget {
                         icon: Icon(Icons.refresh),
                         onPressed: () => device.discoverServices(),
                       ),
-                      IconButton(
+                      const IconButton(
                         icon: SizedBox(
+                          width: 18.0,
+                          height: 18.0,
                           child: CircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation(Colors.grey),
                           ),
-                          width: 18.0,
-                          height: 18.0,
                         ),
                         onPressed: null,
                       )
@@ -391,7 +340,7 @@ class DeviceScreen extends StatelessWidget {
               stream: device.mtu,
               initialData: 0,
               builder: (c, snapshot) => ListTile(
-                title: Text('MTU Size'),
+                title: const Text('MTU Size'),
                 subtitle: Text('${snapshot.data} bytes'),
                 trailing: IconButton(
                   icon: Icon(Icons.edit),
