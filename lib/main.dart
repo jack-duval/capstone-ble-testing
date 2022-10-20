@@ -11,7 +11,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:ble_testing/widgets.dart';
 
-Map<int, String> dataBuffer = new Map();
+Map<String, String> dataBuffer = new Map();
+
+String initTime = "";
+String dataText = "";
+bool isStopped = false;
 
 // Team Buffer: List of CSV data, each with Service UUID + Timestamp
 // List<String> teamBuffer = new List<>();
@@ -125,6 +129,7 @@ class FindDevicesScreen extends StatelessWidget {
                           onTap: () => Navigator.of(context)
                               .push(MaterialPageRoute(builder: (context) {
                             r.device.connect();
+                            isStopped = false;
                             return DeviceScreen(device: r.device);
                           })),
                         ),
@@ -167,25 +172,15 @@ class DeviceScreen extends StatelessWidget {
     return utf8.encode("1");
   }
 
-  void logData(String data) {
-    var key = -1;
+  void logData(String data) async {
+    var key = "";
     var value = "";
 
-    var splitData = data.split(' ');
+    var splitData = data.split(',');
+    key = splitData[0];
+    value = splitData.sublist(1).toString();
 
-    // Get T on first read (pre-ack) to get base time (UTC) and then add seconds to that every time
-    // T, X1, Y1, Z1, X2, Y2, Z2, HR
-    // If data doesn't contain a time reading, return
-    if (!splitData.last.contains("T")) {
-      return;
-    } else {
-      key = int.parse(splitData[0].substring(3));
-      value = splitData.join(" ");
-      // "T: 0,..." assuming the formtat "T: X,...rest_of_data..."
-      dataBuffer.putIfAbsent(key, () => value);
-      print(
-          dataBuffer); // -> Find way of logging the buffer (or at least some values) in real-time
-    }
+    dataBuffer.putIfAbsent(key, () => value);
   }
 
   Widget _buildImpactTile(List<BluetoothService> services) {
@@ -211,27 +206,46 @@ class DeviceScreen extends StatelessWidget {
                 .map((c) => CharacteristicsTile(
                       ackChar: ackCharacteristic,
                       dataChar: dataCharacteristic,
+                      onDisconnectPressed: () async {
+                        isStopped = true;
+                        ackCharacteristic.write(utf8.encode("0"));
+                        device.disconnect();
+                      },
                       onAutoPressed: () async {
                         var read = "";
-                        // Slow for now
-                        const timeDelta = Duration(seconds: 5);
-                        Timer.periodic(timeDelta, (Timer t) {
+                        const timeDelta = Duration(milliseconds: 10);
+                        var initTimestamp = utf8
+                            .decodeStream(dataCharacteristic.read().asStream())
+                            .toString();
+
+                        initTime = initTimestamp;
+                        Timer.periodic(timeDelta, (Timer t) async {
+                          if (isStopped) {
+                            t.cancel();
+                          }
+
                           ackCharacteristic.write(_ackBytes(),
                               withoutResponse: false);
                           read = utf8
                               .decodeStream(
                                   dataCharacteristic.read().asStream())
                               .toString();
+
+                          if (read.toString().contains("emtpy")) {
+                            isStopped = true;
+                            ackCharacteristic.write(utf8.encode("0"));
+                            device.disconnect();
+                          } else {
+                            logData(read.toString());
+                            print(read.toString);
+                            // print("\n");
+                            // print(dataBuffer.toString());
+                          }
                         });
 
-                        if (read != "" && read != "Data Queue Empty") {
-                          // AlertDialog(
-                          //   content: Text(read),
-                          // );
-                          logData(read);
-                          read;
-                          print(read);
-                        }
+                        // logData(read);
+                        // read;
+                        // print(read);
                         //read;
                       },
                     ))
@@ -257,6 +271,7 @@ class DeviceScreen extends StatelessWidget {
                 // Disconnect with Disconnect ACK of "0"
                 case BluetoothDeviceState.connected:
                   onPressed = () async {
+                    isStopped = true;
                     List<BluetoothService> services =
                         await device.discoverServices();
                     for (var s in services) {
@@ -353,7 +368,11 @@ class DeviceScreen extends StatelessWidget {
               initialData: [],
               builder: (c, snapshot) {
                 return Column(
-                  children: [_buildImpactTile(snapshot.data!)],
+                  children: [
+                    _buildImpactTile(snapshot.data!),
+                    Text(initTime),
+                    Text(dataText),
+                  ],
                   //children: _buildServiceTiles(snapshot.data!),
                 );
               },

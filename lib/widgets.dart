@@ -158,14 +158,15 @@ class CharacteristicsTile extends StatelessWidget {
   final BluetoothCharacteristic ackChar;
 
   final VoidCallback? onAutoPressed;
+  final VoidCallback? onDisconnectPressed;
 
-  const CharacteristicsTile(
-      {Key? key,
-      required this.dataChar,
-      required this.ackChar,
-      required this.onAutoPressed,
-      })
-      : super(key: key);
+  const CharacteristicsTile({
+    Key? key,
+    required this.dataChar,
+    required this.ackChar,
+    required this.onAutoPressed,
+    required this.onDisconnectPressed,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -174,6 +175,7 @@ class CharacteristicsTile extends StatelessWidget {
         initialData: dataChar.lastValue,
         builder: (c, snapshot) {
           final value = snapshot.data;
+          ;
           return ExpansionTile(
             title: ListTile(
               title: Column(
@@ -187,7 +189,6 @@ class CharacteristicsTile extends StatelessWidget {
                 ],
               ),
               subtitle: Text(utf8.decode(value!).toString()),
-              contentPadding: EdgeInsets.all(0.0),
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -197,7 +198,11 @@ class CharacteristicsTile extends StatelessWidget {
                       color:
                           Theme.of(context).iconTheme.color?.withOpacity(0.5)),
                   onPressed: onAutoPressed,
-                )
+                ),
+                IconButton(
+                    onPressed: onDisconnectPressed,
+                    icon: Icon(Icons.thumb_down),
+                    color: Theme.of(context).iconTheme.color?.withOpacity(0.5)),
               ],
             ),
           );
