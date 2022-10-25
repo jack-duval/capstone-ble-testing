@@ -123,7 +123,7 @@ class FindDevicesScreen extends StatelessWidget {
                               builder: (c, snapshot) {
                                 if (snapshot.data ==
                                     BluetoothDeviceState.connected) {
-                                  return RaisedButton(
+                                  return ElevatedButton(
                                     child: Text('OPEN'),
                                     onPressed: () => Navigator.of(context).push(
                                         MaterialPageRoute(
@@ -274,7 +274,7 @@ class DeviceScreen extends StatelessWidget {
                 .toList());
       }
     }
-    return Text("MCU Service UUID Not found.");
+    return const Text("MCU Service UUID Not found.");
   }
 
   @override
@@ -290,6 +290,7 @@ class DeviceScreen extends StatelessWidget {
               VoidCallback? onPressed;
               String text;
               switch (snapshot.data) {
+
                 // Disconnect with Disconnect ACK of "0"
                 case BluetoothDeviceState.connected:
                   onPressed = () async {
@@ -300,9 +301,10 @@ class DeviceScreen extends StatelessWidget {
                       if (s.uuid.toString() ==
                           "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
                         var characteristics = s.characteristics;
+                        var UUIDs = getUUIDs(s.uuid);
                         for (var c in characteristics) {
                           if (c.uuid.toString() ==
-                              "ad79d3e8-8f69-4086-b0f4-4aa46cf28000") {
+                              UUIDs[1]) {
                             await c.write(utf8.encode("0"));
                           }
                         }
@@ -322,7 +324,7 @@ class DeviceScreen extends StatelessWidget {
                   text = snapshot.data.toString().substring(21).toUpperCase();
                   break;
               }
-              return FlatButton(
+              return TextButton(
                   onPressed: onPressed,
                   child: Text(
                     text,
