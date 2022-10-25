@@ -113,7 +113,7 @@ class FindDevicesScreen extends StatelessWidget {
                     .asyncMap((_) => FlutterBlue.instance.connectedDevices),
                 initialData: [],
                 builder: (c, snapshot) => Column(
-                  children: snapshot.data!.where((d) => d.name.contains("IMPACT"))
+                  children: snapshot.data!
                       .map((d) => ListTile(
                             title: Text(d.name),
                             subtitle: Text(d.id.toString()),
@@ -230,7 +230,7 @@ class DeviceScreen extends StatelessWidget {
                       dataChar: dataCharacteristic,
                       onDisconnectPressed: () async {
                         isStopped = true;
-                        ackCharacteristic.write(utf8.encode("0"));
+                        //ackCharacteristic.write(utf8.encode("0"));
                         device.disconnect();
                       },
                       onAutoPressed: () async {
@@ -246,29 +246,22 @@ class DeviceScreen extends StatelessWidget {
                             t.cancel();
                           }
 
-                          ackCharacteristic.write(_ackBytes(),
-                              withoutResponse: false);
+                          // ackCharacteristic.write(_ackBytes(),
+                          //     withoutResponse: false);
                           read = utf8
                               .decodeStream(
                                   dataCharacteristic.read().asStream())
                               .toString();
 
-                          if (read.toString().contains("emtpy")) {
+                          if (read.toString().toLowerCase().contains("emtpy")) {
                             isStopped = true;
-                            ackCharacteristic.write(utf8.encode("0"));
+                            // ackCharacteristic.write(utf8.encode("0"));
                             device.disconnect();
                           } else {
                             logData(read.toString());
-                            print(read.toString);
-                            // print("\n");
-                            // print(dataBuffer.toString());
+                            //print(read.toString);
                           }
                         });
-
-                        // logData(read);
-                        // read;
-                        // print(read);
-                        //read;
                       },
                     ))
                 .toList());
@@ -295,21 +288,23 @@ class DeviceScreen extends StatelessWidget {
                 case BluetoothDeviceState.connected:
                   onPressed = () async {
                     isStopped = true;
-                    List<BluetoothService> services =
-                        await device.discoverServices();
-                    for (var s in services) {
-                      if (s.uuid.toString() ==
-                          "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
-                        var characteristics = s.characteristics;
-                        var UUIDs = getUUIDs(s.uuid);
-                        for (var c in characteristics) {
-                          if (c.uuid.toString() ==
-                              UUIDs[1]) {
-                            await c.write(utf8.encode("0"));
-                          }
-                        }
-                      }
-                    }
+                    
+                    // List<BluetoothService> services =
+                    //     await device.discoverServices();
+                    // for (var s in services) {
+                    //   if (s.uuid.toString() ==
+                    //       "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
+                    //     var characteristics = s.characteristics;
+                    //     // ignore: non_constant_identifier_names
+                    //     var UUIDs = getUUIDs(s.uuid);
+                    //     for (var c in characteristics) {
+                    //       if (c.uuid.toString() ==
+                    //           UUIDs[1]) {
+                    //         //await c.write(utf8.encode("0"));
+                    //       }
+                    //     }
+                    //   }
+                    // }
 
                     device.disconnect();
                   };
