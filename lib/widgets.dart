@@ -155,7 +155,6 @@ class ServiceTile extends StatelessWidget {
 
 class CharacteristicsTile extends StatelessWidget {
   final BluetoothCharacteristic dataChar;
-  final BluetoothCharacteristic ackChar;
 
   final VoidCallback? onAutoPressed;
   final VoidCallback? onDisconnectPressed;
@@ -163,7 +162,6 @@ class CharacteristicsTile extends StatelessWidget {
   const CharacteristicsTile({
     Key? key,
     required this.dataChar,
-    required this.ackChar,
     required this.onAutoPressed,
     required this.onDisconnectPressed,
   }) : super(key: key);

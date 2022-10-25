@@ -15,6 +15,8 @@ String initTime = "";
 String dataText = "";
 bool isStopped = false;
 
+List<Guid> serviceUUIDs = [Guid("4fafc201-1fb5-459e-8fcc-c5c9c331914b")];
+
 // Team Buffer: List of CSV data, each with Service UUID + Timestamp
 // List<String> teamBuffer = new List<>();
 
@@ -103,8 +105,8 @@ class FindDevicesScreen extends StatelessWidget {
         title: Text('Find Devices'),
       ),
       body: RefreshIndicator(
-        onRefresh: () =>
-            FlutterBlue.instance.startScan(timeout: Duration(seconds: 4)),
+        onRefresh: () => FlutterBlue.instance.startScan(
+            timeout: Duration(seconds: 4), withServices: serviceUUIDs),
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
@@ -125,10 +127,13 @@ class FindDevicesScreen extends StatelessWidget {
                                     BluetoothDeviceState.connected) {
                                   return ElevatedButton(
                                     child: Text('OPEN'),
-                                    onPressed: () => Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                            builder: (context) =>
-                                                DeviceScreen(device: d))),
+                                    onPressed: () => {
+                                      d.discoverServices(),
+                                      Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  DeviceScreen(device: d)))
+                                    },
                                   );
                                 }
                                 return Text(snapshot.data.toString());
@@ -174,8 +179,8 @@ class FindDevicesScreen extends StatelessWidget {
           } else {
             return FloatingActionButton(
                 child: Icon(Icons.search),
-                onPressed: () => FlutterBlue.instance
-                    .startScan(timeout: Duration(seconds: 4)));
+                onPressed: () => FlutterBlue.instance.startScan(
+                    timeout: Duration(seconds: 4), withServices: serviceUUIDs));
           }
         },
       ),
@@ -187,10 +192,6 @@ class DeviceScreen extends StatelessWidget {
   const DeviceScreen({Key? key, required this.device}) : super(key: key);
 
   final BluetoothDevice device;
-
-  List<int> _ackBytes() {
-    return utf8.encode("1");
-  }
 
   void logData(String data) async {
     var key = "";
@@ -212,13 +213,10 @@ class DeviceScreen extends StatelessWidget {
 
         var charUUIDS = getUUIDs(mcuService.uuid);
         var dataCharacteristicUUID = charUUIDS[0];
-        var ackCharacteristicUUID = charUUIDS[1];
+        // var ackCharacteristicUUID = charUUIDS[1];
 
         var dataCharacteristic = mcuService.characteristics
             .singleWhere((c) => c.uuid.toString() == dataCharacteristicUUID);
-        var ackCharacteristic = mcuService.characteristics
-            .singleWhere((c) => c.uuid.toString() == ackCharacteristicUUID);
-
         return ServiceTile(
             service: mcuService,
             characteristicTiles: [
@@ -226,7 +224,6 @@ class DeviceScreen extends StatelessWidget {
                   (c) => c.uuid.toString() == dataCharacteristicUUID)
             ]
                 .map((c) => CharacteristicsTile(
-                      ackChar: ackCharacteristic,
                       dataChar: dataCharacteristic,
                       onDisconnectPressed: () async {
                         isStopped = true;
@@ -235,7 +232,7 @@ class DeviceScreen extends StatelessWidget {
                       },
                       onAutoPressed: () async {
                         var read = "";
-                        const timeDelta = Duration(milliseconds: 10);
+                        const timeDelta = Duration(milliseconds: 5);
                         var initTimestamp = utf8
                             .decodeStream(dataCharacteristic.read().asStream())
                             .toString();
@@ -245,9 +242,6 @@ class DeviceScreen extends StatelessWidget {
                           if (isStopped) {
                             t.cancel();
                           }
-
-                          // ackCharacteristic.write(_ackBytes(),
-                          //     withoutResponse: false);
                           read = utf8
                               .decodeStream(
                                   dataCharacteristic.read().asStream())
@@ -255,11 +249,9 @@ class DeviceScreen extends StatelessWidget {
 
                           if (read.toString().toLowerCase().contains("emtpy")) {
                             isStopped = true;
-                            // ackCharacteristic.write(utf8.encode("0"));
                             device.disconnect();
                           } else {
                             logData(read.toString());
-                            //print(read.toString);
                           }
                         });
                       },
@@ -284,34 +276,17 @@ class DeviceScreen extends StatelessWidget {
               String text;
               switch (snapshot.data) {
 
-                // Disconnect with Disconnect ACK of "0"
+                // Disconnect with Disconnect ACK of "0" -> not
                 case BluetoothDeviceState.connected:
                   onPressed = () async {
                     isStopped = true;
-                    
-                    // List<BluetoothService> services =
-                    //     await device.discoverServices();
-                    // for (var s in services) {
-                    //   if (s.uuid.toString() ==
-                    //       "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
-                    //     var characteristics = s.characteristics;
-                    //     // ignore: non_constant_identifier_names
-                    //     var UUIDs = getUUIDs(s.uuid);
-                    //     for (var c in characteristics) {
-                    //       if (c.uuid.toString() ==
-                    //           UUIDs[1]) {
-                    //         //await c.write(utf8.encode("0"));
-                    //       }
-                    //     }
-                    //   }
-                    // }
-
                     device.disconnect();
                   };
                   text = 'DISCONNECT';
                   break;
                 case BluetoothDeviceState.disconnected:
                   onPressed = () => device.connect();
+                  device.discoverServices();
                   text = 'CONNECT';
                   break;
                 default:
