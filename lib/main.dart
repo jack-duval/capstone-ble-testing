@@ -18,6 +18,28 @@ bool isStopped = false;
 // Team Buffer: List of CSV data, each with Service UUID + Timestamp
 // List<String> teamBuffer = new List<>();
 
+// take in a service UUID (unique per MCU)
+//  Return its data and ACK UUIDs in a List
+// Guid serviceUUID --> <String>[dataUUID, ackUUID]
+List<String> getUUIDs(Guid serviceUUID) {
+  var ret = <String>[];
+  var splitUUID = serviceUUID.toString().split("-");
+  var firstSegment = splitUUID[0];
+
+  var dataSegment = int.parse(firstSegment, radix: 16) + 1;
+  var ackSegment = dataSegment + 1;
+
+  var dataUUID =
+      "${dataSegment.toRadixString(16)}-${splitUUID.sublist(1).join("-")}";
+  var ackUUID =
+      "${ackSegment.toRadixString(16)}-${splitUUID.sublist(1).join("-")}";
+
+  ret.add(dataUUID);
+  ret.add(ackUUID);
+
+  return ret;
+}
+
 void main() {
   runApp(FlutterBlueApp());
 }
@@ -188,8 +210,10 @@ class DeviceScreen extends StatelessWidget {
           "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
         mcuService = services[i];
 
-        var dataCharacteristicUUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
-        var ackCharacteristicUUID = "ad79d3e8-8f69-4086-b0f4-4aa46cf28000";
+        var charUUIDS = getUUIDs(mcuService.uuid);
+        var dataCharacteristicUUID = charUUIDS[0];
+        var ackCharacteristicUUID = charUUIDS[1];
+
         var dataCharacteristic = mcuService.characteristics
             .singleWhere((c) => c.uuid.toString() == dataCharacteristicUUID);
         var ackCharacteristic = mcuService.characteristics
