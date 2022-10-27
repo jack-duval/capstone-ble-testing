@@ -9,13 +9,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:ble_testing/widgets.dart';
 
-Map<String, String> dataBuffer = new Map();
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'firebase_options.dart';
 
 String initTime = "";
 String dataText = "";
 bool isStopped = false;
 
-List<Guid> serviceUUIDs = [Guid("4fafc201-1fb5-459e-8fcc-c5c9c331914b")];
+List<Guid> serviceUUIDs = [
+  Guid("4faf183e-1fb5-459e-8fcc-c5c9c331914b"),
+  // ...
+];
+
+FirebaseDatabase database = FirebaseDatabase.instance;
+DatabaseReference ref = database.ref("ble_testing/");
 
 // Team Buffer: List of CSV data, each with Service UUID + Timestamp
 // List<String> teamBuffer = new List<>();
@@ -23,26 +31,20 @@ List<Guid> serviceUUIDs = [Guid("4fafc201-1fb5-459e-8fcc-c5c9c331914b")];
 // take in a service UUID (unique per MCU)
 //  Return its data and ACK UUIDs in a List
 // Guid serviceUUID --> <String>[dataUUID, ackUUID]
-List<String> getUUIDs(Guid serviceUUID) {
-  var ret = <String>[];
+Guid getDataCharUUID(Guid serviceUUID) {
   var splitUUID = serviceUUID.toString().split("-");
-  var firstSegment = splitUUID[0];
 
-  var dataSegment = int.parse(firstSegment, radix: 16) + 1;
-  var ackSegment = dataSegment + 1;
-
-  var dataUUID =
-      "${dataSegment.toRadixString(16)}-${splitUUID.sublist(1).join("-")}";
-  var ackUUID =
-      "${ackSegment.toRadixString(16)}-${splitUUID.sublist(1).join("-")}";
-
-  ret.add(dataUUID);
-  ret.add(ackUUID);
-
-  return ret;
+  var dataSegment = int.parse(splitUUID[0], radix: 16) + 1;
+  return Guid(
+      "${dataSegment.toRadixString(16)}-${splitUUID.sublist(1).join("-")}");
 }
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(FlutterBlueApp());
 }
 
@@ -128,7 +130,7 @@ class FindDevicesScreen extends StatelessWidget {
                                   return ElevatedButton(
                                     child: Text('OPEN'),
                                     onPressed: () => {
-                                      d.discoverServices(),
+                                      //await d.discoverServices(),
                                       Navigator.of(context).push(
                                           MaterialPageRoute(
                                               builder: (context) =>
@@ -154,6 +156,7 @@ class FindDevicesScreen extends StatelessWidget {
                           onTap: () => Navigator.of(context)
                               .push(MaterialPageRoute(builder: (context) {
                             r.device.connect();
+                            r.device.discoverServices();
                             isStopped = false;
                             return DeviceScreen(device: r.device);
                           })),
@@ -200,34 +203,28 @@ class DeviceScreen extends StatelessWidget {
     var splitData = data.split(',');
     key = splitData[0];
     value = splitData.sublist(1).toString();
-
-    dataBuffer.putIfAbsent(key, () => value);
   }
 
   Widget _buildImpactTile(List<BluetoothService> services) {
     BluetoothService mcuService;
     for (int i = 0; i < services.length; i++) {
-      if (services[i].uuid.toString() ==
-          "4fafc201-1fb5-459e-8fcc-c5c9c331914b") {
-        mcuService = services[i];
+      if (services[i].uuid.toString() == serviceUUIDs[0].toString()) {
 
-        var charUUIDS = getUUIDs(mcuService.uuid);
-        var dataCharacteristicUUID = charUUIDS[0];
-        // var ackCharacteristicUUID = charUUIDS[1];
+        mcuService = services[i];
+        var dataCharacteristicUUID = getDataCharUUID(mcuService.uuid);
 
         var dataCharacteristic = mcuService.characteristics
-            .singleWhere((c) => c.uuid.toString() == dataCharacteristicUUID);
+            .singleWhere((c) => c.uuid == dataCharacteristicUUID);
         return ServiceTile(
             service: mcuService,
             characteristicTiles: [
               mcuService.characteristics.singleWhere(
-                  (c) => c.uuid.toString() == dataCharacteristicUUID)
+                  (c) => c.uuid == dataCharacteristicUUID)
             ]
                 .map((c) => CharacteristicsTile(
                       dataChar: dataCharacteristic,
                       onDisconnectPressed: () async {
                         isStopped = true;
-                        //ackCharacteristic.write(utf8.encode("0"));
                         device.disconnect();
                       },
                       onAutoPressed: () async {
@@ -243,9 +240,13 @@ class DeviceScreen extends StatelessWidget {
                             t.cancel();
                           }
                           read = utf8
-                              .decodeStream(
-                                  dataCharacteristic.read().asStream())
+                              // maybe try .value! instead of lastValue (not sure what this does)
+                              .decode(dataCharacteristic.lastValue)
                               .toString();
+                          var readSplit = read.toString();
+                          var timeStamp = readSplit;
+                          var writeRef = database.ref('ble_testing/$timeStamp');
+                          await writeRef.set({"data": read.toString()});
 
                           if (read.toString().toLowerCase().contains("emtpy")) {
                             isStopped = true;
@@ -275,18 +276,17 @@ class DeviceScreen extends StatelessWidget {
               VoidCallback? onPressed;
               String text;
               switch (snapshot.data) {
-
-                // Disconnect with Disconnect ACK of "0" -> not
                 case BluetoothDeviceState.connected:
-                  onPressed = () async {
+                  onPressed = () {
                     isStopped = true;
                     device.disconnect();
                   };
                   text = 'DISCONNECT';
                   break;
                 case BluetoothDeviceState.disconnected:
-                  onPressed = () => device.connect();
-                  device.discoverServices();
+                  onPressed = () {
+                    device.connect();
+                  };
                   text = 'CONNECT';
                   break;
                 default:

@@ -1,0 +1,83 @@
+{
+  "project_info": {
+    "project_number": "727266902680",
+    "firebase_url": "https://nu-capstone-db-default-rtdb.firebaseio.com",
+    "project_id": "nu-capstone-db",
+    "storage_bucket": "nu-capstone-db.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:727266902680:android:9f77a7f2f626e603cf86ed",
+        "android_client_info": {
+          "package_name": "com.example.ble_testing"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "727266902680-apbuvlpau66ns69aqg66danjq6dk35fk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPc8QqkH9Br0NY9pn_hpFRteXf0s0zKPk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "727266902680-apbuvlpau66ns69aqg66danjq6dk35fk.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "727266902680-mop8jnq6j726477qe0ka0qhm4fsf0j4i.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.impactV1"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:727266902680:android:30c609364bb264dccf86ed",
+        "android_client_info": {
+          "package_name": "com.example.impact_v1"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "727266902680-apbuvlpau66ns69aqg66danjq6dk35fk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPc8QqkH9Br0NY9pn_hpFRteXf0s0zKPk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "727266902680-apbuvlpau66ns69aqg66danjq6dk35fk.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "727266902680-mop8jnq6j726477qe0ka0qhm4fsf0j4i.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.impactV1"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

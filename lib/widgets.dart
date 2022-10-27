@@ -131,6 +131,7 @@ class ServiceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     if (characteristicTiles.length > 0) {
       return ExpansionTile(
+        initiallyExpanded: true,
         title: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
