@@ -30,11 +30,16 @@ DatabaseReference ref = database.ref("ble_testing/");
 
 // take in a service UUID (unique per MCU)
 //  Return its data and ACK UUIDs in a List
+
 // Guid serviceUUID --> <String>[dataUUID, ackUUID]
 Guid getDataCharUUID(Guid serviceUUID) {
+  // first split given uuid as a string, delimited by "-"
   var splitUUID = serviceUUID.toString().split("-");
 
+  // the data segment is the first segment of the given UUID, incremented by 1
   var dataSegment = int.parse(splitUUID[0], radix: 16) + 1;
+  
+  // return a GUID version of the string, re-joined by "-"
   return Guid(
       "${dataSegment.toRadixString(16)}-${splitUUID.sublist(1).join("-")}");
 }
