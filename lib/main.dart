@@ -224,7 +224,7 @@ class DeviceScreen extends StatelessWidget {
             service: mcuService,
             characteristicTiles: [
               mcuService.characteristics
-              //.singleWhere((c) => c.uuid == dataCharacteristicUUID)
+              .singleWhere((c) => c.uuid == dataCharacteristicUUID)
             ]
                 .map((c) => CharacteristicsTile(
                       dataChar: dataCharacteristic,
@@ -232,6 +232,7 @@ class DeviceScreen extends StatelessWidget {
                         isStopped = true;
                         device.disconnect();
                       },
+
                       onAutoPressed: () async {
                         var read = "";
                         const timeDelta = Duration(milliseconds: 5);
@@ -244,6 +245,7 @@ class DeviceScreen extends StatelessWidget {
                           if (isStopped) {
                             t.cancel();
                           }
+
                           read = utf8
                               // maybe try .value! instead of lastValue (not sure what this does)
                               .decode(dataCharacteristic.lastValue)
