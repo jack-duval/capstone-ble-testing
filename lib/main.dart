@@ -19,6 +19,7 @@ bool isStopped = false;
 
 List<Guid> serviceUUIDs = [
   Guid("4faf183e-1fb5-459e-8fcc-c5c9c331914b"),
+  Guid("4FAFC201-1FB5-459E-8FCC-C5C9C331914B")
   // ...
 ];
 
@@ -32,16 +33,15 @@ DatabaseReference ref = database.ref("ble_testing/");
 //  Return its data and ACK UUIDs in a List
 
 // Guid serviceUUID --> <String>[dataUUID, ackUUID]
-Guid getDataCharUUID(Guid serviceUUID) {
+String getDataCharUUID(Guid serviceUUID) {
   // first split given uuid as a string, delimited by "-"
   var splitUUID = serviceUUID.toString().split("-");
 
   // the data segment is the first segment of the given UUID, incremented by 1
   var dataSegment = int.parse(splitUUID[0], radix: 16) + 1;
-  
+
   // return a GUID version of the string, re-joined by "-"
-  return Guid(
-      "${dataSegment.toRadixString(16)}-${splitUUID.sublist(1).join("-")}");
+  return "${dataSegment.toRadixString(16)}-${splitUUID.sublist(1).join("-")}";
 }
 
 void main() async {
@@ -113,7 +113,7 @@ class FindDevicesScreen extends StatelessWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () => FlutterBlue.instance.startScan(
-            timeout: Duration(seconds: 4), withServices: serviceUUIDs),
+            timeout: Duration(seconds: 4)), //, withServices: serviceUUIDs),
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
@@ -187,8 +187,14 @@ class FindDevicesScreen extends StatelessWidget {
           } else {
             return FloatingActionButton(
                 child: Icon(Icons.search),
-                onPressed: () => FlutterBlue.instance.startScan(
-                    timeout: Duration(seconds: 4), withServices: serviceUUIDs));
+                onPressed: () => {
+                      FlutterBlue.instance
+                          .startScan(timeout: Duration(seconds: 4)),
+                      //withServices: serviceUUIDs),
+                      database
+                          .ref('ble_testing/latest_scan')
+                          .set(DateTime.now().toString()),
+                    });
           }
         },
       ),
@@ -201,30 +207,24 @@ class DeviceScreen extends StatelessWidget {
 
   final BluetoothDevice device;
 
-  void logData(String data) async {
-    var key = "";
-    var value = "";
-
-    var splitData = data.split(',');
-    key = splitData[0];
-    value = splitData.sublist(1).toString();
+  String cleanDateTime(DateTime t) {
+    return "${t.year.toString()}-${t.month.toString()}-${t.day.toString()}-${t.hour.toString()}-${t.minute.toString()}-${t.millisecond.toString()}";
   }
 
   Widget _buildImpactTile(List<BluetoothService> services) {
     BluetoothService mcuService;
     for (int i = 0; i < services.length; i++) {
-      if (services[i].uuid.toString() == serviceUUIDs[0].toString()) {
-
+      if (services[i].uuid == serviceUUIDs[1]) {
         mcuService = services[i];
-        var dataCharacteristicUUID = getDataCharUUID(mcuService.uuid);
+        var dataCharacteristicUUID = Guid(getDataCharUUID(mcuService.uuid));
 
         var dataCharacteristic = mcuService.characteristics
             .singleWhere((c) => c.uuid == dataCharacteristicUUID);
         return ServiceTile(
             service: mcuService,
             characteristicTiles: [
-              mcuService.characteristics.singleWhere(
-                  (c) => c.uuid == dataCharacteristicUUID)
+              mcuService.characteristics
+              //.singleWhere((c) => c.uuid == dataCharacteristicUUID)
             ]
                 .map((c) => CharacteristicsTile(
                       dataChar: dataCharacteristic,
@@ -235,9 +235,9 @@ class DeviceScreen extends StatelessWidget {
                       onAutoPressed: () async {
                         var read = "";
                         const timeDelta = Duration(milliseconds: 5);
-                        var initTimestamp = utf8
-                            .decodeStream(dataCharacteristic.read().asStream())
-                            .toString();
+                        var initRelTime = "";
+                        DateTime initAbsTime;
+                        var initTimestamp = "";
 
                         initTime = initTimestamp;
                         Timer.periodic(timeDelta, (Timer t) async {
@@ -248,17 +248,31 @@ class DeviceScreen extends StatelessWidget {
                               // maybe try .value! instead of lastValue (not sure what this does)
                               .decode(dataCharacteristic.lastValue)
                               .toString();
-                          var readSplit = read.toString();
-                          var timeStamp = readSplit;
-                          var writeRef = database.ref('ble_testing/$timeStamp');
-                          await writeRef.set({"data": read.toString()});
+                          initAbsTime = DateTime.now();
+
+                          var readSplit = read.split(",");
+                          var timeStamp = "";
 
                           if (read.toString().toLowerCase().contains("emtpy")) {
                             isStopped = true;
                             device.disconnect();
-                          } else {
-                            logData(read.toString());
                           }
+
+                          if (readSplit.length == 1) {
+                            initRelTime = readSplit[0];
+                            //"${now.year.toString()}-${now.month.toString()}-${now.day.toString()}-${now.hour.toString()}-${now.minute.toString()}-${now.millisecond.toString()}";
+                          }
+
+                          if (readSplit.length > 1) {
+                            var currTime = initAbsTime.add(Duration(
+                                milliseconds: int.parse(readSplit[0]) -
+                                    int.parse(initRelTime)));
+                            timeStamp = cleanDateTime(currTime);
+                          }
+
+                          var writeRef = database.ref('ble_testing/$timeStamp');
+                          await writeRef
+                              .set({"data": readSplit.sublist(1).toString()});
                         });
                       },
                     ))
