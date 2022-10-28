@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
@@ -213,6 +214,21 @@ class DeviceScreen extends StatelessWidget {
     return "${t.year.toString()}-${t.month.toString()}-${t.day.toString()}-${t.hour.toString()}-${t.minute.toString()}-${t.millisecond.toString()}";
   }
 
+  Map<String, Object> packetize(List<String> data) {
+    Map<String, Object> ret = {};
+
+    var currMCU = 1;
+    for (int i = 1; i < 10; i += 3) {
+      ret["x$currMCU"] = double.parse(data[i]);
+      ret["y$currMCU"] = double.parse(data[i + 1]);
+      ret["z$currMCU"] = double.parse(data[i + 2]);
+      currMCU++;
+    }
+
+    ret["HR"] = int.parse(data[10]);
+    return ret;
+  }
+
   Widget _buildImpactTile(List<BluetoothService> services) {
     BluetoothService mcuService;
     for (int i = 0; i < services.length; i++) {
@@ -274,10 +290,10 @@ class DeviceScreen extends StatelessWidget {
                             helmetBuffer[timeStamp] = readSplit.sublist(1);
                           }
 
+                          var packet = packetize(readSplit);
                           var writeRef = database
                               .ref('impact/${mcuService.uuid.toString()}/');
-                          await writeRef.set(
-                              {timeStamp: readSplit.sublist(1).toString()});
+                          await writeRef.set({timeStamp: packet});
                         });
                       },
                     ))
