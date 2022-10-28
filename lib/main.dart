@@ -23,6 +23,8 @@ List<Guid> serviceUUIDs = [
   // ...
 ];
 
+Map<String, List<String>> helmetBuffer = new Map();
+
 FirebaseDatabase database = FirebaseDatabase.instance;
 DatabaseReference ref = database.ref("ble_testing/");
 
@@ -224,7 +226,7 @@ class DeviceScreen extends StatelessWidget {
             service: mcuService,
             characteristicTiles: [
               mcuService.characteristics
-              .singleWhere((c) => c.uuid == dataCharacteristicUUID)
+                  .singleWhere((c) => c.uuid == dataCharacteristicUUID)
             ]
                 .map((c) => CharacteristicsTile(
                       dataChar: dataCharacteristic,
@@ -232,10 +234,10 @@ class DeviceScreen extends StatelessWidget {
                         isStopped = true;
                         device.disconnect();
                       },
-
                       onAutoPressed: () async {
                         var read = "";
                         const timeDelta = Duration(milliseconds: 5);
+
                         var initRelTime = "";
                         DateTime initAbsTime;
                         var initTimestamp = "";
@@ -262,7 +264,6 @@ class DeviceScreen extends StatelessWidget {
 
                           if (readSplit.length == 1) {
                             initRelTime = readSplit[0];
-                            //"${now.year.toString()}-${now.month.toString()}-${now.day.toString()}-${now.hour.toString()}-${now.minute.toString()}-${now.millisecond.toString()}";
                           }
 
                           if (readSplit.length > 1) {
@@ -270,11 +271,13 @@ class DeviceScreen extends StatelessWidget {
                                 milliseconds: int.parse(readSplit[0]) -
                                     int.parse(initRelTime)));
                             timeStamp = cleanDateTime(currTime);
+                            helmetBuffer[timeStamp] = readSplit.sublist(1);
                           }
 
-                          var writeRef = database.ref('ble_testing/$timeStamp');
-                          await writeRef
-                              .set({"data": readSplit.sublist(1).toString()});
+                          var writeRef = database
+                              .ref('impact/${mcuService.uuid.toString()}/');
+                          await writeRef.set(
+                              {timeStamp: readSplit.sublist(1).toString()});
                         });
                       },
                     ))
