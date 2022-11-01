@@ -113,16 +113,16 @@ class FindDevicesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Find Devices'),
+        title: const Text('Find Devices'),
       ),
       body: RefreshIndicator(
         onRefresh: () => FlutterBlue.instance.startScan(
-            timeout: Duration(seconds: 4), withServices: serviceUUIDs),
+            timeout: const Duration(seconds: 4), withServices: serviceUUIDs),
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
               StreamBuilder<List<BluetoothDevice>>(
-                stream: Stream.periodic(Duration(seconds: 2))
+                stream: Stream.periodic(const Duration(seconds: 2))
                     .asyncMap((_) => FlutterBlue.instance.connectedDevices),
                 initialData: [],
                 builder: (c, snapshot) => Column(
@@ -137,7 +137,7 @@ class FindDevicesScreen extends StatelessWidget {
                                 if (snapshot.data ==
                                     BluetoothDeviceState.connected) {
                                   return ElevatedButton(
-                                    child: Text('OPEN'),
+                                    child: const Text('OPEN'),
                                     onPressed: () => {
                                       //await d.discoverServices(),
                                       Navigator.of(context).push(
@@ -184,16 +184,16 @@ class FindDevicesScreen extends StatelessWidget {
         builder: (c, snapshot) {
           if (snapshot.data!) {
             return FloatingActionButton(
-              child: Icon(Icons.stop),
               onPressed: () => FlutterBlue.instance.stopScan(),
               backgroundColor: Colors.red,
+              child: const Icon(Icons.stop),
             );
           } else {
             return FloatingActionButton(
-                child: Icon(Icons.search),
+                child: const Icon(Icons.search),
                 onPressed: () => {
                       FlutterBlue.instance
-                          .startScan(timeout: Duration(seconds: 4),
+                          .startScan(timeout: const Duration(seconds: 4),
                       withServices: serviceUUIDs),
                       database
                           .ref('ble_testing/latest_scan')
