@@ -299,7 +299,8 @@ class DeviceScreen extends StatelessWidget {
                             
                             // assuming helmetBuffer is Map<timeStamp, packet>, m
                             // for each timestamp (t) in buffer:
-                            // await writeRef.update({t: m[t]})evice.disconnect();
+                            // await writeRef.update({t: m[t]})
+                            device.disconnect();
                           }
 
                           // If we see a split length of 1, it means we're at the first packet
