@@ -20,7 +20,7 @@ bool isStopped = false;
 
 List<Guid> serviceUUIDs = [
   Guid("4faf183e-1fb5-459e-8fcc-c5c9c331914b"),
-  Guid("4FAFC201-1FB5-459E-8FCC-C5C9C331914B")
+  Guid("4fafc201-1fb5-459e-8Fcc-c5c9c331914b"),
   // ...
 ];
 
@@ -321,7 +321,9 @@ class DeviceScreen extends StatelessWidget {
                 .toList());
       }
     }
-    return const Text("MCU Service UUID Not found.");
+
+    // If we don't find a service ID from our list, show error string
+    return const Text("Err: MCU Service UUID Not found.");
   }
 
   @override
