@@ -23,7 +23,7 @@ List<Guid> serviceUUIDs = [
   // ...
 ];
 
-Map<String, List<String>> helmetBuffer = new Map();
+Map<String, List<String>> helmetBuffer = {};
 
 FirebaseDatabase database = FirebaseDatabase.instance;
 DatabaseReference ref = database.ref("ble_testing/");
@@ -192,9 +192,9 @@ class FindDevicesScreen extends StatelessWidget {
             return FloatingActionButton(
                 child: const Icon(Icons.search),
                 onPressed: () => {
-                      FlutterBlue.instance
-                          .startScan(timeout: const Duration(seconds: 4),
-                      withServices: serviceUUIDs),
+                      FlutterBlue.instance.startScan(
+                          timeout: const Duration(seconds: 4),
+                          withServices: serviceUUIDs),
                       database
                           .ref('ble_testing/latest_scan')
                           .set(DateTime.now().toString()),
@@ -276,9 +276,21 @@ class DeviceScreen extends StatelessWidget {
 
                           // Split the read value, delimited by commas
                           var readSplit = read.split(",");
-                          
+
                           // Init current timestamp to ""
                           var timeStamp = "";
+
+                          if (device.name.toString()[-1] == "!") {
+                            // we have an impact, highest priroity interrupt (more than disconnect)
+                            // current handling: write to impacts sheet in DB with timestamp, serviceUUID
+                            var writeRef = database.ref(
+                                'impact/impacts/${mcuService.uuid.toString()}/');
+                            var currTime = initAbsTime.add(Duration(
+                                milliseconds: int.parse(readSplit[0]) -
+                                    int.parse(initRelTime)));
+                            timeStamp = cleanDateTime(currTime);
+                            writeRef.update({timeStamp: "1"});
+                          }
 
                           // If we've reached the end of the queue, disconnect
                           if (read.toString().toLowerCase().contains("emtpy")) {
@@ -295,7 +307,7 @@ class DeviceScreen extends StatelessWidget {
 
                           // Otherwise, we have a complete packet. set the current actual time =
                           //  = (current relative timestamp - init relative timestamp) + init absolute time
-                          
+
                           if (readSplit.length > 1) {
                             var currTime = initAbsTime.add(Duration(
                                 milliseconds: int.parse(readSplit[0]) -
@@ -309,7 +321,7 @@ class DeviceScreen extends StatelessWidget {
 
                           // use packetize function to map values to a json-friendly format
                           var packet = packetize(readSplit);
-                          
+
                           // Write to the database!
                           var writeRef = database
                               .ref('impact/${mcuService.uuid.toString()}/');
@@ -377,8 +389,8 @@ class DeviceScreen extends StatelessWidget {
               initialData: BluetoothDeviceState.connecting,
               builder: (c, snapshot) => ListTile(
                 leading: (snapshot.data == BluetoothDeviceState.connected)
-                    ? Icon(Icons.bluetooth_connected)
-                    : Icon(Icons.bluetooth_disabled),
+                    ? const Icon(Icons.bluetooth_connected)
+                    : const Icon(Icons.bluetooth_disabled),
                 title: Text(
                     'Device is ${snapshot.data.toString().split('.')[1]}.'),
                 subtitle: Text('${device.id}'),
@@ -389,7 +401,7 @@ class DeviceScreen extends StatelessWidget {
                     index: snapshot.data! ? 1 : 0,
                     children: <Widget>[
                       IconButton(
-                        icon: Icon(Icons.refresh),
+                        icon: const Icon(Icons.refresh),
                         onPressed: () => device.discoverServices(),
                       ),
                       const IconButton(
@@ -414,7 +426,7 @@ class DeviceScreen extends StatelessWidget {
                 title: const Text('MTU Size'),
                 subtitle: Text('${snapshot.data} bytes'),
                 trailing: IconButton(
-                  icon: Icon(Icons.edit),
+                  icon: const Icon(Icons.edit),
                   onPressed: () => device.requestMtu(223),
                 ),
               ),
