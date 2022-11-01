@@ -4,7 +4,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
@@ -118,7 +117,7 @@ class FindDevicesScreen extends StatelessWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () => FlutterBlue.instance.startScan(
-            timeout: Duration(seconds: 4)), //, withServices: serviceUUIDs),
+            timeout: Duration(seconds: 4), withServices: serviceUUIDs),
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
@@ -194,8 +193,8 @@ class FindDevicesScreen extends StatelessWidget {
                 child: Icon(Icons.search),
                 onPressed: () => {
                       FlutterBlue.instance
-                          .startScan(timeout: Duration(seconds: 4)),
-                      //withServices: serviceUUIDs),
+                          .startScan(timeout: Duration(seconds: 4),
+                      withServices: serviceUUIDs),
                       database
                           .ref('ble_testing/latest_scan')
                           .set(DateTime.now().toString()),
