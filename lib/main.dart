@@ -295,7 +295,11 @@ class DeviceScreen extends StatelessWidget {
                           // If we've reached the end of the queue, disconnect
                           if (read.toString().toLowerCase().contains("emtpy")) {
                             isStopped = true;
-                            device.disconnect();
+                            // Write helmet buffer to D                                
+                            
+                            // assuming helmetBuffer is Map<timeStamp, packet>, m
+                            // for each timestamp (t) in buffer:
+                            // await writeRef.update({t: m[t]})evice.disconnect();
                           }
 
                           // If we see a split length of 1, it means we're at the first packet
@@ -317,15 +321,15 @@ class DeviceScreen extends StatelessWidget {
                             timeStamp = cleanDateTime(currTime);
                             // Add timestamp to buffer
                             helmetBuffer[timeStamp] = readSplit.sublist(1);
+
+                            // use packetize function to map values to a json-friendly format
+                            var packet = packetize(readSplit);
+
+                            // Write to the database!
+                            var writeRef = database
+                                .ref('impact/${mcuService.uuid.toString()}/');
+                            await writeRef.update({timeStamp: packet});
                           }
-
-                          // use packetize function to map values to a json-friendly format
-                          var packet = packetize(readSplit);
-
-                          // Write to the database!
-                          var writeRef = database
-                              .ref('impact/${mcuService.uuid.toString()}/');
-                          await writeRef.update({timeStamp: packet});
                         });
                       },
                     ))
