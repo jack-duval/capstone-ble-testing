@@ -75,6 +75,7 @@ class FlutterBlueApp extends StatelessWidget {
   }
 }
 
+// If Bluetooth is not enabled, this screen displays.
 class BluetoothOffScreen extends StatelessWidget {
   const BluetoothOffScreen({Key? key, this.state}) : super(key: key);
 
@@ -107,6 +108,7 @@ class BluetoothOffScreen extends StatelessWidget {
   }
 }
 
+// When searching for devices:
 class FindDevicesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -205,6 +207,7 @@ class FindDevicesScreen extends StatelessWidget {
   }
 }
 
+// When a particular device is selected :
 class DeviceScreen extends StatelessWidget {
   const DeviceScreen({Key? key, required this.device}) : super(key: key);
 
@@ -234,10 +237,11 @@ class DeviceScreen extends StatelessWidget {
     for (int i = 0; i < services.length; i++) {
       if (services[i].uuid == serviceUUIDs[1]) {
         mcuService = services[i];
-        var dataCharacteristicUUID = Guid(getDataCharUUID(mcuService.uuid));
 
+        var dataCharacteristicUUID = Guid(getDataCharUUID(mcuService.uuid));
         var dataCharacteristic = mcuService.characteristics
             .singleWhere((c) => c.uuid == dataCharacteristicUUID);
+
         return ServiceTile(
             service: mcuService,
             characteristicTiles: [
@@ -255,45 +259,62 @@ class DeviceScreen extends StatelessWidget {
                         const timeDelta = Duration(milliseconds: 5);
 
                         var initRelTime = "";
-                        DateTime initAbsTime;
+                        DateTime initAbsTime = DateTime.now();
                         var initTimestamp = "";
 
                         initTime = initTimestamp;
                         Timer.periodic(timeDelta, (Timer t) async {
+                          // Begin time-based loop with timeDelta above. Break if isStopped == True
                           if (isStopped) {
                             t.cancel();
                           }
 
+                          // Read the current value of the data characteristic
                           read = utf8
                               // maybe try .value! instead of lastValue (not sure what this does)
                               .decode(dataCharacteristic.lastValue)
                               .toString();
-                          initAbsTime = DateTime.now();
 
+                          // Split the read value, delimited by commas
                           var readSplit = read.split(",");
+                          
+                          // Init current timestamp to ""
                           var timeStamp = "";
 
+                          // If we've reached the end of the queue, disconnect
                           if (read.toString().toLowerCase().contains("emtpy")) {
                             isStopped = true;
                             device.disconnect();
                           }
 
+                          // If we see a split length of 1, it means we're at the first packet
+                          //  this means we're seeing the boot timestamp, save it.
                           if (readSplit.length == 1) {
                             initRelTime = readSplit[0];
+                            initAbsTime = DateTime.now();
                           }
 
+                          // Otherwise, we have a complete packet. set the current actual time =
+                          //  = (current relative timestamp - init relative timestamp) + init absolute time
+                          
                           if (readSplit.length > 1) {
                             var currTime = initAbsTime.add(Duration(
                                 milliseconds: int.parse(readSplit[0]) -
                                     int.parse(initRelTime)));
+
+                            // Clean it up into a format that firebase accepts
                             timeStamp = cleanDateTime(currTime);
+                            // Add timestamp to buffer
                             helmetBuffer[timeStamp] = readSplit.sublist(1);
                           }
 
+                          // use packetize function to map values to a json-friendly format
                           var packet = packetize(readSplit);
+                          
+                          // Write to the database!
                           var writeRef = database
                               .ref('impact/${mcuService.uuid.toString()}/');
-                          await writeRef.set({timeStamp: packet});
+                          await writeRef.update({timeStamp: packet});
                         });
                       },
                     ))
