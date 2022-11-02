@@ -13,9 +13,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'firebase_options.dart';
 
+import './helpers.dart';
+
 String initTime = "";
 String dataText = "";
 bool isStopped = false;
+
+Utils utils = new Utils();
 
 List<Guid> serviceUUIDs = [
   Guid("4faf183e-1fb5-459e-8fcc-c5c9c331914b"),
@@ -24,8 +28,12 @@ List<Guid> serviceUUIDs = [
 ];
 
 Map<Guid, List<String>> PlayerInfoIDs = {
-  Guid("4faf183e-1fb5-459e-8fcc-c5c9c331914b") : ["Player 1", "Last Name 1", "1"],
-  Guid("4faf183e-1fb5-459e-8fcc-c5c9c331914b") : ["Player 2", "Last Name 2", "2"]
+  Guid("4faf183e-1fb5-459e-8fcc-c5c9c331914b"): [
+    "Player 1",
+    "Last Name 1",
+    "1"
+  ],
+  Guid("4faf183e-1fb5-459e-8fcc-c5c9c331914b"): ["Player 2", "Last Name 2", "2"]
 };
 
 Map<String, List<String>> helmetBuffer = {};
@@ -133,7 +141,8 @@ class FindDevicesScreen extends StatelessWidget {
                 builder: (c, snapshot) => Column(
                   children: snapshot.data!
                       .map((d) => ListTile(
-                            title: Text(PlayerInfoIDs[d.id].toString()), //Text(d.name), // Text(getPlayerInfo(d.id))
+                            title: Text(PlayerInfoIDs[d.id]
+                                .toString()), //Text(d.name), // Text(getPlayerInfo(d.id))
                             subtitle: Text(d.id.toString()),
                             trailing: StreamBuilder<BluetoothDeviceState>(
                               stream: d.state,
@@ -217,25 +226,6 @@ class DeviceScreen extends StatelessWidget {
 
   final BluetoothDevice device;
 
-  String cleanDateTime(DateTime t) {
-    return "${t.year.toString()}-${t.month.toString()}-${t.day.toString()}-${t.hour.toString()}-${t.minute.toString()}-${t.millisecond.toString()}";
-  }
-
-  Map<String, Object> packetize(List<String> data) {
-    Map<String, Object> ret = {};
-
-    var currMCU = 1;
-    for (int i = 1; i < 10; i += 3) {
-      ret["x$currMCU"] = double.parse(data[i]);
-      ret["y$currMCU"] = double.parse(data[i + 1]);
-      ret["z$currMCU"] = double.parse(data[i + 2]);
-      currMCU++;
-    }
-
-    ret["HR"] = int.parse(data[10]);
-    return ret;
-  }
-
   Widget _buildImpactTile(List<BluetoothService> services) {
     BluetoothService mcuService;
     for (int i = 0; i < services.length; i++) {
@@ -246,102 +236,14 @@ class DeviceScreen extends StatelessWidget {
         var dataCharacteristic = mcuService.characteristics
             .singleWhere((c) => c.uuid == dataCharacteristicUUID);
 
-        return ServiceTile(
-            service: mcuService,
-            characteristicTiles: [
-              mcuService.characteristics
-                  .singleWhere((c) => c.uuid == dataCharacteristicUUID)
-            ]
-                .map((c) => CharacteristicsTile(
-                      dataChar: dataCharacteristic,
-                      onDisconnectPressed: () async {
-                        isStopped = true;
-                        device.disconnect();
-                      },
-                      
-                      onAutoPressed: () async {
-                        var read = "";
-                        const timeDelta = Duration(milliseconds: 5);
-
-                        var initRelTime = "";
-                        DateTime initAbsTime = DateTime.now();
-                        var initTimestamp = "";
-
-                        initTime = initTimestamp;
-                        Timer.periodic(timeDelta, (Timer t) async {
-                          // Begin time-based loop with timeDelta above. Break if isStopped == True
-                          if (isStopped) {
-                            t.cancel();
-                          }
-
-                          // Read the current value of the data characteristic
-                          read = utf8
-                              // maybe try .value! instead of lastValue (not sure what this does)
-                              .decode(dataCharacteristic.lastValue)
-                              .toString();
-
-                          // Split the read value, delimited by commas
-                          var readSplit = read.split(",");
-
-                          // Init current timestamp to ""
-                          var timeStamp = "";
-
-                          if (device.name.toString().contains("!")) {
-                            // we have an impact, highest priroity interrupt (more than disconnect)
-                            // current handling: write to impacts sheet in DB with timestamp, serviceUUID
-                            var writeRef = database.ref(
-                                'impact/impacts/${mcuService.uuid.toString()}/');
-                            var currTime = initAbsTime.add(Duration(
-                                milliseconds: int.parse(readSplit[0]) -
-                                    int.parse(initRelTime)));
-                            timeStamp = cleanDateTime(currTime);
-                            writeRef.update({timeStamp: "1"});
-                          }
-
-                          // If we've reached the end of the queue, disconnect
-                          if (read.toString().toLowerCase().contains("emtpy")) {
-                            isStopped = true;
-                            
-                            // Write helmet buffer to D
-
-                            // assuming helmetBuffer is Map<timeStamp, packet>, m
-                            // for each timestamp (t) in buffer:
-                            // await writeRef.update({t: m[t]})
-                            device.disconnect();
-                          }
-
-                          // If we see a split length of 1, it means we're at the first packet
-                          //  this means we're seeing the boot timestamp, save it.
-                          if (readSplit.length == 1) {
-                            initRelTime = readSplit[0];
-                            initAbsTime = DateTime.now();
-                          }
-
-                          // Otherwise, we have a complete packet. set the current actual time =
-                          //  = (current relative timestamp - init relative timestamp) + init absolute time
-                          // if (readSplit.length > 1) {
-                          else {
-                            var currTime = initAbsTime.add(Duration(
-                                milliseconds: int.parse(readSplit[0]) -
-                                    int.parse(initRelTime)));
-
-                            // Clean it up into a format that firebase accepts
-                            timeStamp = cleanDateTime(currTime);
-                            // Add timestamp to buffer
-                            helmetBuffer[timeStamp] = readSplit.sublist(1);
-
-                            // use packetize function to map values to a json-friendly format
-                            var packet = packetize(readSplit);
-
-                            // Write to the database!
-                            var writeRef = database
-                                .ref('impact/${mcuService.uuid.toString()}/');
-                            await writeRef.update({timeStamp: packet});
-                          }
-                        });
-                      },
-                    ))
-                .toList());
+        return ServiceTile(service: mcuService, characteristicTiles: [
+          CharacteristicsTile(
+            dataChar: dataCharacteristic,
+            onDisconnectPressed: () => utils.deviceDisconnect(device),
+            onAutoPressed: () => utils.deviceReadWrite(device, mcuService,
+                dataCharacteristic, database, initTime, helmetBuffer),
+          )
+        ]);
       }
     }
 
