@@ -234,7 +234,7 @@ class DeviceScreen extends StatelessWidget {
   Widget _buildImpactTile(List<BluetoothService> services) {
     BluetoothService mcuService;
     for (int i = 0; i < services.length; i++) {
-      if (services[i].uuid == serviceUUIDs[1]) {
+      if (serviceUUIDs.contains(services[i].uuid)) {
         mcuService = services[i];
 
         var dataCharacteristicUUID = Guid(getDataCharUUID(mcuService.uuid));
@@ -280,7 +280,7 @@ class DeviceScreen extends StatelessWidget {
                           // Init current timestamp to ""
                           var timeStamp = "";
 
-                          if (device.name.toString()[-1] == "!") {
+                          if (device.name.toString().contains("!")) {
                             // we have an impact, highest priroity interrupt (more than disconnect)
                             // current handling: write to impacts sheet in DB with timestamp, serviceUUID
                             var writeRef = database.ref(
@@ -312,8 +312,8 @@ class DeviceScreen extends StatelessWidget {
 
                           // Otherwise, we have a complete packet. set the current actual time =
                           //  = (current relative timestamp - init relative timestamp) + init absolute time
-
-                          if (readSplit.length > 1) {
+                          //if (readSplit.length > 1) {
+                          else {
                             var currTime = initAbsTime.add(Duration(
                                 milliseconds: int.parse(readSplit[0]) -
                                     int.parse(initRelTime)));
