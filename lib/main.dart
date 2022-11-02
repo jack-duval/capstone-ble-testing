@@ -23,6 +23,11 @@ List<Guid> serviceUUIDs = [
   // ...
 ];
 
+Map<Guid, List<String>> PlayerInfoIDs = {
+  Guid("4faf183e-1fb5-459e-8fcc-c5c9c331914b") : ["Player 1", "Last Name 1", "1"],
+  Guid("4faf183e-1fb5-459e-8fcc-c5c9c331914b") : ["Player 2", "Last Name 2", "2"]
+};
+
 Map<String, List<String>> helmetBuffer = {};
 
 FirebaseDatabase database = FirebaseDatabase.instance;
@@ -117,7 +122,7 @@ class FindDevicesScreen extends StatelessWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () => FlutterBlue.instance.startScan(
-            timeout: const Duration(seconds: 4), withServices: serviceUUIDs),
+            timeout: const Duration(seconds: 4)), //withServices: serviceUUIDs),
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
@@ -128,7 +133,7 @@ class FindDevicesScreen extends StatelessWidget {
                 builder: (c, snapshot) => Column(
                   children: snapshot.data!
                       .map((d) => ListTile(
-                            title: Text(d.name),
+                            title: Text(PlayerInfoIDs[d.id].toString()), //Text(d.name), // Text(getPlayerInfo(d.id))
                             subtitle: Text(d.id.toString()),
                             trailing: StreamBuilder<BluetoothDeviceState>(
                               stream: d.state,
@@ -192,9 +197,9 @@ class FindDevicesScreen extends StatelessWidget {
             return FloatingActionButton(
                 child: const Icon(Icons.search),
                 onPressed: () => {
-                      FlutterBlue.instance.startScan(
-                          timeout: const Duration(seconds: 4),
-                          withServices: serviceUUIDs),
+                      FlutterBlue.instance
+                          .startScan(timeout: const Duration(seconds: 4)),
+                      //withServices: serviceUUIDs),
                       database
                           .ref('ble_testing/latest_scan')
                           .set(DateTime.now().toString()),
@@ -253,6 +258,7 @@ class DeviceScreen extends StatelessWidget {
                         isStopped = true;
                         device.disconnect();
                       },
+                      
                       onAutoPressed: () async {
                         var read = "";
                         const timeDelta = Duration(milliseconds: 5);
@@ -295,8 +301,9 @@ class DeviceScreen extends StatelessWidget {
                           // If we've reached the end of the queue, disconnect
                           if (read.toString().toLowerCase().contains("emtpy")) {
                             isStopped = true;
-                            // Write helmet buffer to D                                
                             
+                            // Write helmet buffer to D
+
                             // assuming helmetBuffer is Map<timeStamp, packet>, m
                             // for each timestamp (t) in buffer:
                             // await writeRef.update({t: m[t]})
@@ -312,7 +319,7 @@ class DeviceScreen extends StatelessWidget {
 
                           // Otherwise, we have a complete packet. set the current actual time =
                           //  = (current relative timestamp - init relative timestamp) + init absolute time
-                          //if (readSplit.length > 1) {
+                          // if (readSplit.length > 1) {
                           else {
                             var currTime = initAbsTime.add(Duration(
                                 milliseconds: int.parse(readSplit[0]) -
