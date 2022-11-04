@@ -239,9 +239,21 @@ class DeviceScreen extends StatelessWidget {
         return ServiceTile(service: mcuService, characteristicTiles: [
           CharacteristicsTile(
             dataChar: dataCharacteristic,
-            onDisconnectPressed: () => utils.deviceDisconnect(device),
-            onAutoPressed: () => utils.deviceReadWrite(device, mcuService,
-                dataCharacteristic, database, initTime, helmetBuffer),
+            onDisconnectPressed: () => {
+              device.disconnect(),
+              isStopped = true,
+            },
+            onAutoPressed: () async =>
+                Timer.periodic(const Duration(milliseconds: 5), (t) {
+              if (isStopped) {
+                t.cancel();
+              }
+
+              utils.oldACKlessRW(device, mcuService, dataCharacteristic,
+                  database, initTime, helmetBuffer, isStopped);
+            }),
+            // utils.deviceReadWrite(device, mcuService,
+            //     dataCharacteristic, database, initTime, helmetBuffer),
           )
         ]);
       }
