@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:ble_testing/widgets.dart';
@@ -247,10 +248,11 @@ class DeviceScreen extends StatelessWidget {
                 Timer.periodic(const Duration(milliseconds: 5), (t) {
               if (isStopped) {
                 t.cancel();
+                device.disconnect();
+              } else {
+                utils.deviceReadWrite(t, device, mcuService, dataCharacteristic,
+                    database, initTime, helmetBuffer, isStopped);
               }
-
-              utils.oldACKlessRW(device, mcuService, dataCharacteristic,
-                  database, initTime, helmetBuffer, isStopped);
             }),
             // utils.deviceReadWrite(device, mcuService,
             //     dataCharacteristic, database, initTime, helmetBuffer),
