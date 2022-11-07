@@ -225,6 +225,8 @@ class FindDevicesScreen extends StatelessWidget {
 class DeviceScreen extends StatelessWidget {
   const DeviceScreen({Key? key, required this.device}) : super(key: key);
 
+  // How to cycle: Refactor above to hold list of device. Create a count mechanism outside of the _buildImpactTile function, increment curr device?
+
   final BluetoothDevice device;
 
   Widget _buildImpactTile(List<BluetoothService> services) {
