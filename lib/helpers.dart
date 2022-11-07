@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'globals.dart' as globals;
 
 class Utils {
   bool isStopped = false;
@@ -25,23 +27,32 @@ class Utils {
     return "${t.year.toString()}-${t.month.toString()}-${t.day.toString()}-${t.hour.toString()}-${t.minute.toString()}-${t.millisecond.toString()}";
   }
 
-  Map<String, Object> packetize(List<String> data) {
-    Map<String, Object> ret = {};
+  Map<String, num> packetize(List<String> data) {
+    Map<String, num> ret = {};
 
     if (data.length == 1) {
       if (data[0].contains("empty")) {
         return {};
       } else {
-        return {"init_time": data[0]};
+        return {"init_time": int.parse(data[0])};
       }
     } else {
-      var currMCU = 1;
+      var currAccel = 1;
       for (int i = 1; i < 10; i += 3) {
-        ret["x$currMCU"] = double.parse(data[i]);
-        ret["y$currMCU"] = double.parse(data[i + 1]);
-        ret["z$currMCU"] = double.parse(data[i + 2]);
-        currMCU++;
+        ret["x$currAccel"] = double.parse(data[i]);
+        ret["y$currAccel"] = double.parse(data[i + 1]);
+        ret["z$currAccel"] = double.parse(data[i + 2]);
+        ret["magnitude$currAccel"] = sqrt(pow(ret["x$currAccel"]!, 2) +
+            pow(ret["y$currAccel"]!, 2) +
+            pow(ret["z$currAccel"]!, 2));
+        currAccel++;
       }
+
+      ret["impact"] = (ret["magnitude1"]! > globals.IMPACT_THRESHOLD ||
+              ret["magnitude2"]! > globals.IMPACT_THRESHOLD ||
+              ret["magnitude3"]! > globals.IMPACT_THRESHOLD)
+          ? 1
+          : 0;
 
       //ret["HR"] = int.parse(data[10]);
       return ret;
