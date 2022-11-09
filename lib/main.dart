@@ -144,7 +144,7 @@ class FindDevicesScreen extends StatelessWidget {
                       .map((d) => ListTile(
                             title: Text(PlayerInfoIDs[d.id]
                                 .toString()), //Text(d.name), // Text(getPlayerInfo(d.id))
-                            subtitle: Text(d.id.toString()),
+                            subtitle: Text(d.id.toString().toLowerCase()),
                             trailing: StreamBuilder<BluetoothDeviceState>(
                               stream: d.state,
                               initialData: BluetoothDeviceState.disconnected,
