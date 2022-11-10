@@ -5,7 +5,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:ble_testing/widgets.dart';
@@ -224,6 +223,8 @@ class FindDevicesScreen extends StatelessWidget {
 // When a particular device is selected :
 class DeviceScreen extends StatelessWidget {
   const DeviceScreen({Key? key, required this.device}) : super(key: key);
+
+  // How to cycle: Refactor above to hold list of device. Create a count mechanism outside of the _buildImpactTile function, increment curr device?
 
   final BluetoothDevice device;
 
