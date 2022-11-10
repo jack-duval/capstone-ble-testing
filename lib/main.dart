@@ -245,8 +245,9 @@ class DeviceScreen extends StatelessWidget {
               device.disconnect(),
               isStopped = true,
             },
-            onAutoPressed: () async =>
-                Timer.periodic(const Duration(milliseconds: 5), (t) {
+            onAutoPressed: () async => {
+              database.ref('/impact_testing_throw').remove(),
+              Timer.periodic(const Duration(milliseconds: 5), (t) {
               if (isStopped) {
                 t.cancel();
                 device.disconnect();
@@ -254,7 +255,7 @@ class DeviceScreen extends StatelessWidget {
                 utils.deviceReadWrite(t, device, mcuService, dataCharacteristic,
                     database, initTime, helmetBuffer, isStopped);
               }
-            }),
+            })},
             // utils.deviceReadWrite(device, mcuService,
             //     dataCharacteristic, database, initTime, helmetBuffer),
           )

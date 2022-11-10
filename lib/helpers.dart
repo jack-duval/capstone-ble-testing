@@ -48,6 +48,10 @@ class Utils {
         currAccel++;
       }
 
+      if (data.length == 11) {
+        ret["hr"] = int.parse(data[10]);
+      }
+
       ret["impact"] = (ret["magnitude1"]! > globals.IMPACT_THRESHOLD ||
               ret["magnitude2"]! > globals.IMPACT_THRESHOLD ||
               ret["magnitude3"]! > globals.IMPACT_THRESHOLD)
@@ -121,9 +125,10 @@ class Utils {
     var timeStamp = cleanDateTime(currTime);
 
     var packet = packetize(readSplit);
-    currBuffer[timeStamp] = packet;
+    // currBuffer[timeStamp] = packet;
 
-    // var writeRef = database.ref('impact/${mcuService.uuid.toString()}/');
-    // writeRef.update({timeStamp: packet});
+    var writeRef =
+        database.ref('impact_testing_throw/${mcuService.uuid.toString()}/');
+    writeRef.update({timeStamp: packet});
   }
 }
