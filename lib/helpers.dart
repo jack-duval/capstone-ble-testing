@@ -79,24 +79,24 @@ class Utils {
     // If we've reached the end of the queue, disconnect
     if (read.toString().toLowerCase().contains("emtpy")) {
       // isStopped = true;
-      // var writeRef =
-      //     database.ref('IMPACT_BUFFER/${mcuService.uuid.toString()}/');
+      var writeRef =
+          database.ref('IMPACT_BUFFER/${mcuService.uuid.toString()}/');
 
-      // for (var r in currBuffer.keys) {
-      //   await writeRef.update({r: currBuffer[r]});
-      // }
+      for (var r in currBuffer.keys.toList()) {
+        writeRef.update({r: currBuffer[r]});
+      }
 
-      // print(currBuffer);
-      // currBuffer.clear();
+      print(currBuffer);
+      currBuffer.clear();
 
       isStopped = true;
-      t.cancel();
+      // t.cancel();
       // device.disconnect();
     }
 
     // If we see a split length of 1, it means we're at the first packet
     //  this means we're seeing the boot timestamp, save it.
-    if (readSplit.length == 1) {
+    if (readSplit.length == 1 && !read.toLowerCase().contains("empty")) {
       // initRelTime = readSplit[0];
       // initAbsTime = DateTime.now();
       read = utf8
@@ -110,10 +110,9 @@ class Utils {
     var timeStamp = cleanDateTime(currTime);
 
     var packet = packetize(readSplit);
+    currBuffer[timeStamp] = packet;
 
-    // currBuffer[timeStamp] = packet;
-
-    var writeRef = database.ref('impact/${mcuService.uuid.toString()}/');
-    writeRef.update({timeStamp: packet});
+    // var writeRef = database.ref('impact/${mcuService.uuid.toString()}/');
+    // writeRef.update({timeStamp: packet});
   }
 }
